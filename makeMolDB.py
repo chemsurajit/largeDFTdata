@@ -7,7 +7,6 @@ from collections import Counter
 import ase.db
 import xyz2mol
 from rdkit import Chem
-from rdkit.Chem.rdMolDescriptors import CalcMolFormula
 import pandas as pd
 import csv
 import logging
@@ -296,17 +295,6 @@ def update_failed_indices(outputfile, indices):
     return
 
 
-def update_pd_df(inpdf, index=None, smiles=None, chemformula=None, bonds=None, g4mp2_energy=None, energies=None):
-    """Function to update to dataframe
-    """
-    row_dict = {"index":index, "smiles":smiles, "chemformula":chemformula, "G4MP2":g4mp2_energy}
-    row_dict.update(energies)
-    row_dict.update(bonds)
-    df = pd.DataFrame(row_dict, index=[0])
-    newdf = pd.concat([inpdf, df])
-    return newdf
-
-
 def get_arguments():
     parser = argparse.ArgumentParser(
         description="Make db file of the QM9 dataset with 76 DFT and 3 basis sets."
@@ -337,14 +325,6 @@ def get_arguments():
         default="warning",
         choices=["debug", "info", "warning", "error", "critical"],
         help="Provide logging level. Default is warning."
-    )
-    parser.add_argument(
-        "-output_format", "--output_format",
-        type=str,
-        required=False,
-        default="csv",
-        choices=["csv", "db"],
-        help="Output format for the data. db stands for sqlite3 db format using ASE."
     )
     return parser.parse_args()
 
@@ -388,7 +368,7 @@ def create_atoms_csv(dft_log_dir):
         else:
             for atom in atoms:
                 adf_atom_out = os.path.join(atom_dir, atom+".out")
-                energies = get_energies(adf_atom_out)
+                energies = get_energies(adf_atom_out) # energies is a dictionary
                 energies["atom"] = atom
                 atoms_data.append(energies)
             with open(out_csv, 'w') as csvfile:
@@ -490,7 +470,11 @@ def modify_dict_keys(atomization_en_dict):
     return modified_dict
 
 
-def create_molecules_db(outdb_file, xyzfiles, failed_indices_outfile, dft_log_dir):
+def create_output_db(
+        output_file,
+        xyzfiles,
+        failed_indices_outfile,
+        dft_log_dir):
     """
     This function creates the sqlite3 db file using ASE in the output directory.
 
@@ -503,7 +487,7 @@ def create_molecules_db(outdb_file, xyzfiles, failed_indices_outfile, dft_log_di
     The structure is: {"SZ": {"func1":E1, "func2":E2...}, "DZP":{"func1":E1, "func2":E2...}..}
     """
     failed_mols_indices = []
-    logging.info("creating db file...")
+    logging.info("creating database file...")
     logging.info("loading atomic csv files...")
     sz_atoms_energies = pd.read_csv(
         os.path.join(dft_log_dir, "SZ", "atoms", "atoms.csv"), index_col=False
@@ -525,7 +509,7 @@ def create_molecules_db(outdb_file, xyzfiles, failed_indices_outfile, dft_log_di
         os.path.join(dft_log_dir, "TZP", "molecules", "molecules.csv")
     )
     row_count = 0
-    with ase.db.connect(outdb_file, append=False) as asedb:
+    with ase.db.connect(output_file, append=False) as asedb:
         for xyzfile in xyzfiles:
             external_table = {}
             key_val_pairs = {}
@@ -558,24 +542,8 @@ def create_molecules_db(outdb_file, xyzfiles, failed_indices_outfile, dft_log_di
             row_count += 1
             if (row_count % 10000) == 0:
                 logging.info("Finished %d rows." % row_count)
-    logging.info("Finished creating db file: %s", outdb_file)
+    logging.info("Finished creating db file: %s", output_file)
     update_failed_indices(failed_indices_outfile, failed_mols_indices)
-    return
-
-
-def make_db_mols_ens(
-        output_dir,
-        xyzfiles,
-        failed_indices_outfile,
-        dft_log_dirs,
-        output_format
-):
-    if output_format == "csv":
-        print("call for csv file making")
-    elif output_format == "db":
-        output_file = os.path.join(output_dir, "molecules_qm9.db")
-        create_molecules_db(output_file, xyzfiles, failed_indices_outfile, dft_log_dirs)
-    pass
 
 
 def main():
@@ -595,20 +563,13 @@ def main():
     # create the output directory if doesn't exists
     check_create_outdir(output_dir)
     failed_indices_outfile = os.path.join(output_dir, "failed_xyz2mol.dat")
-    #outdb_file = os.path.join(output_dir, "molecules_qm9.db")
+    output_file = os.path.join(output_dir, "molecules_qm9.db")
     xyzfiles = get_files(xyz_dir, match="dsgdb9nsd_*.xyz")
     logging.info("Number of xyz files: %d" % len(xyzfiles))
     # First, create atoms.csv files inside each of the SZ, DZP, and TZP directories.
     create_atoms_csv(dft_log_dir)
     create_molecules_csv(dft_log_dir)
-    make_db_mols_ens(
-        output_dir,
-        xyzfiles,
-        failed_indices_outfile,
-        dft_log_dir,
-        args.output_format
-                     )
-    #create_molecules_db(output_file, xyzfiles, failed_indices_outfile, dft_log_dir)
+    create_output_db(output_file, xyzfiles, failed_indices_outfile, dft_log_dir)
     return
 
 
