@@ -220,10 +220,11 @@ def create_atoms_csv_xtb(xtb_log_dir):
     else:
         for atom in ["C", "F", "H", "N", "O"]:
             adf_atom_out = os.path.join(atoms_dir, atom+".out")
-            energies = get_xtb_energy(adf_atom_out) # return as float.
-            atoms_data.append([atom, energies])
+            energy = get_xtb_energy(adf_atom_out) # return as float.
+            atoms_data.append([atom, energy])
         with open(out_csv, "w") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=["GFNXTB", "atom"])
+            writer = csv.writer(csvfile)
+            writer.writerow(["atom","GFNXTB"])
             print("test: ", atoms_data)
             writer.writerows(atoms_data)
         logging.info("atoms.csv file created inside: %s" % atoms_dir)
