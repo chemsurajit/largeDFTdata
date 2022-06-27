@@ -12,6 +12,9 @@ import csv
 import logging
 
 
+# conversion constant:
+eh2ev = 27.2114
+
 def check_create_outdir(outdir=None):
     """
     This function will create a output directory if it does not exists.
@@ -47,209 +50,6 @@ def get_files(directory, match=""):
         print("Program exit now.")
         sys.exit()
     return sorted(allfiles)
-
-
-def get_dft_energies(logfile):
-    """This function takes a ADF logfile and return the dft energies as dictionary.
-    args:
-        logfile - ADF output file
-    returns:
-        dft_energies - dictionary of DFT energies. Keys as functional, value as energy in eV.
-    """
-    dft_energies = {}
-    with open(logfile, 'r') as flog:
-        for line in flog:
-            if "FR:" in line:
-                FR_cont = True
-                func = line[4:19].strip().upper()
-                en_ev = float(line.split("=")[1].split()[1])
-                dft_energies[func] = en_ev
-    if not FR_cont:
-        logging.warning("No data found for DFT functional in: %s" % logfile)
-        logging.info("The reason could be that the ADF log file prints the energy with different format.")
-    return dft_energies
-
-
-def mol_to_bonds_list(molobj, filename):
-    """This function takes a RDKit mol object as input with xyzfile and makes
-    a list of bonds. The list of bonds will always be confined in the variable
-    defined as bonds_list. If some bonds not present, it will be assigned to zero.
-    args:
-        molobj - RDKit format mol object
-        filename - The xyz file name
-    returns:
-        bonds_list - list of bonds after counting each of the bond types.
-    """
-    bonds_list = {'C_s_C': 0, 'C_d_C': 0, 'C_t_C': 0, 'C_C_A': 0,
-                  'C_s_H': 0, 'C_s_O': 0, 'C_d_O': 0, 'C_t_O': 0,
-                  'C_O_A': 0, 'C_s_N': 0, 'C_d_N': 0, 'C_t_N': 0,
-                  'C_N_A': 0, 'C_s_F': 0, 'O_s_O': 0, 'O_d_O': 0,
-                  'O_O_A': 0, 'O_s_H': 0, 'O_s_N': 0, 'O_d_N': 0,
-                  'O_t_N': 0, 'O_N_A': 0, 'O_s_F': 0, 'N_s_N': 0,
-                  'N_d_N': 0, 'N_t_N': 0, 'N_N_A': 0, 'N_s_H': 0,
-                  'N_s_F': 0, 'F_s_H': 0
-                  }
-
-    xyzfile = os.path.basename(filename)
-    if molobj is not None:
-        for bond in molobj.GetBonds():
-            btype = bond.GetBondType()
-            a1 = molobj.GetAtomWithIdx(bond.GetBeginAtomIdx()).GetSymbol()
-            a2 = molobj.GetAtomWithIdx(bond.GetEndAtomIdx()).GetSymbol()
-            #
-            # C-C bonds
-            #
-            if a1+a2 == "CC":
-                if str(btype) == "SINGLE":
-                    bonds_list['C_s_C'] += 1
-                elif str(btype) == "DOUBLE":
-                    bonds_list['C_d_C'] += 1
-                elif str(btype) == "TRIPLE":
-                    bonds_list['C_t_C'] += 1
-                elif str(btype) == "AROMATIC":
-                    bonds_list['C_C_A'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-                    raise ValueError
-            #
-            # C-H bonds
-            #
-            elif a1+a2 == "CH" or a2+a1 == "CH":
-                if str(btype) == "SINGLE":
-                    bonds_list['C_s_H'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-                    raise ValueError
-            #
-            # C-O bonds
-            #
-            elif a1+a2 == "CO" or a2+a1 == "CO":
-                if str(btype) == "SINGLE":
-                    bonds_list['C_s_O'] += 1
-                elif str(btype) == "DOUBLE":
-                    bonds_list['C_d_O'] += 1
-                elif str(btype) == "TRIPLE":
-                    bonds_list['C_t_O'] += 1
-                elif str(btype) == "AROMATIC":
-                    bonds_list['C_O_A'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # C-N bonds
-            #
-            elif a1+a2 == "CN" or a2+a1 == "CN":
-                if str(btype) == "SINGLE":
-                    bonds_list['C_s_N'] += 1
-                elif str(btype) == "DOUBLE":
-                    bonds_list['C_d_N'] += 1
-                elif str(btype) == "TRIPLE":
-                    bonds_list['C_t_N'] += 1
-                elif str(btype) == "AROMATIC":
-                    bonds_list['C_N_A'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # C-F bonds
-            #
-            elif a1+a2 == "CF" or a2+a1 == "CF":
-                if str(btype) == "SINGLE":
-                    bonds_list['C_s_F'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # O-O bonds
-            #
-            elif a1+a2 == "OO":
-                if str(btype) == "SINGLE":
-                    bonds_list['O_s_O'] += 1
-                elif str(btype) == "DOUBLE":
-                    bonds_list['O_d_O'] += 1
-                elif str(btype) == "AROMATIC":
-                    bonds_list['O_O_A'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # O-H bond
-            #
-            elif a1+a2 == "OH" or a2+a1 == "OH":
-                if str(btype) == "SINGLE":
-                    bonds_list['O_s_H'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # O-N bonds
-            #
-            elif a1+a2 == "ON" or a2+a1 == "ON":
-                if str(btype) == "SINGLE":
-                    bonds_list['O_s_N'] += 1
-                elif str(btype) == "DOUBLE":
-                    bonds_list['O_d_N'] += 1
-                elif str(btype) == "TRIPLE":
-                    bonds_list['O_t_N'] += 1
-                elif str(btype) == "AROMATIC":
-                    bonds_list['O_N_A'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # O-F bond
-            #
-            elif a1+a2 == "OF" or a2+a1 == "OF":
-                if str(btype) == "SINGLE":
-                    bonds_list['O_s_F'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # N-N bonds
-            #
-            elif a1+a2 == "NN":
-                if str(btype) == "SINGLE":
-                    bonds_list['N_s_N'] += 1
-                elif str(btype) == "DOUBLE":
-                    bonds_list['N_d_N'] += 1
-                elif str(btype) == "TRIPLE":
-                    bonds_list['N_t_N'] += 1
-                elif str(btype) == "AROMATIC":
-                    bonds_list['N_N_A'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # N-H bond
-            #
-            elif a1+a2 == "NH" or a2+a1 == "NH":
-                if str(btype) == "SINGLE":
-                    bonds_list['N_s_H'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # N-F bonds
-            #
-            elif a1+a2 == "NF" or a2+a1 == "NF":
-                if str(btype) == "SINGLE":
-                    bonds_list['N_s_F'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-            #
-            # F-H bond
-            #
-            elif a1+a2 == "FH" or a2+a1 == "FH":
-                if str(btype) == "SINGLE":
-                    bonds_list['F_s_H'] += 1
-                else:
-                    logging.error("Don't know bond type: %s %s" % (str(btype), (a1+"-"+a2)))
-                    logging.error("Exiting for: %s" % xyzfile)
-    return bonds_list
 
 
 def get_properties_combined(index, smiles, chem_formula, bonds_list):
@@ -309,7 +109,13 @@ def get_arguments():
         "-dft_log_dir", "--dft_log_dir",
         type=str,
         required=True,
-        help="Location of the directory from where the logfiles will be read."
+        help="Location of the directory from where the logfiles will be read. This include TZP, DZP, SZ, and GFN-XTB."
+    )
+    parser.add_argument(
+        "-xtb_log_dir", "--xtb_log_dir",
+        type=str,
+        required=True,
+        help="Location of the directory where the xtb logfiles are kept."
     )
     parser.add_argument(
         "-output_dir", "--output_dir",
@@ -329,14 +135,14 @@ def get_arguments():
     return parser.parse_args()
 
 
-def get_energies(adf_out_file):
+def get_dft_energies(adf_out_file):
     """
     This function will return the energies of each of the 76 DFT functionals as dictionary.
     dictionary format: {FUNCTIONAL_name : energy_value}
     """
     dft_energies = {}
     FR_cont = False # A flag to print if the outfile does not contain energies with expected format
-    with open(adf_out_file) as fp:
+    with open(adf_out_file, "r") as fp:
         for line in fp.readlines():
             if "FR:" in line:
                 FR_cont = True
@@ -347,7 +153,26 @@ def get_energies(adf_out_file):
         logging.error("ADF outfile %s doesn't contain energies in required form." % adf_out_file)
     return dft_energies
 
-def create_atoms_csv(dft_log_dir):
+
+def get_xtb_energy(xtb_log_file):
+    """
+    This function will return the energy from a xtb log file as float.
+    """
+    Energy_eh = None
+    Energy_ev = None
+    with open(xtb_log_file, "r") as fp:
+        for line in fp.readlines():
+            if "TOTAL ENERGY" in line:
+                Energy_eh = float(line.split()[3])
+                break
+        if Energy_eh is None:
+            logging.warning("No energy value found in the xtb logfile: %s" % xtb_log_file)
+        else:
+            Energy_ev = Energy_eh * eh2ev
+    return Energy_ev
+
+
+def create_atoms_csv_dft(dft_log_dir):
     """
     This function will create atoms.csv files inside the following directories:
     PATH/SZ/atoms/, PATH/DZP/atoms/, and PATH/TZP/atoms/
@@ -368,7 +193,7 @@ def create_atoms_csv(dft_log_dir):
         else:
             for atom in atoms:
                 adf_atom_out = os.path.join(atom_dir, atom+".out")
-                energies = get_energies(adf_atom_out) # energies is a dictionary
+                energies = get_dft_energies(adf_atom_out) # energies is a dictionary
                 energies["atom"] = atom
                 atoms_data.append(energies)
             with open(out_csv, 'w') as csvfile:
@@ -379,17 +204,42 @@ def create_atoms_csv(dft_log_dir):
             logging.info("atoms.csv file created inside: %s" % atom_dir)
     return
 
-def create_molecules_csv(dft_log_dir):
+
+def create_atoms_csv_xtb(xtb_log_dir):
+    """
+    This function will create atoms.csv files inside the xtb directory:
+    PATH/atoms/
+    It is also assumed that the extension of the xtb log files are in .out format, ie,
+    C.out, F.out, H.out, N.out, O.out
+    """
+    atoms_dir = os.path.join(xtb_log_dir, "atoms")
+    out_csv = os.path.join(atoms_dir, "atoms.csv")
+    atoms_data = []
+    if os.path.isfile(out_csv):
+        logging.warning("atoms csv file %s exists. Skipping." % out_csv)
+    else:
+        for atom in ["C", "F", "H", "N", "O"]:
+            adf_atom_out = os.path.join(atoms_dir, atom+".out")
+            energies = get_xtb_energy(adf_atom_out) # return as float.
+            atoms_data.append([atom, energies])
+        with open(out_csv, "w") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=["GFNXTB", "atom"])
+            writer.writerows(atoms_data)
+        logging.info("atoms.csv file created inside: %s" % atoms_dir)
+    return
+
+
+def create_molecules_csv_dft(dft_log_dir):
     """
     This function will create molecules.csv files inside the following directories:
     <PATH>/SZ/molecules/, <PATH>/DSP/molecules/, <PATH>/TZP/molecules/
     It is also assumed that the extension of the adf log files are in .out format, ie,
-    mol1.out, mol2.out, etc.
+    mol1_xyz.out, mol2_xyz.out, etc.
     """
     molecule_dirs = [
         os.path.join(dft_log_dir, "SZ", "molecules"),
         os.path.join(dft_log_dir, "DZP", "molecules"),
-        os.path.join(dft_log_dir, "TZP", "molecules")
+        os.path.join(dft_log_dir, "TZP", "molecules"),
     ]
     for molecule_dir in molecule_dirs:
         out_csv = os.path.join(molecule_dir, "molecules.csv")
@@ -403,10 +253,10 @@ def create_molecules_csv(dft_log_dir):
             loop_counter = 0
             with open(out_csv, 'w') as csvfile:
                 for logfile in logfiles:
-                    energies = get_energies(logfile)
+                    energies = get_dft_energies(logfile)
                     logindex = int(os.path.basename(logfile).split("_")[0])
                     if not energies:
-                        logging.warning("No dft energies found for index: %s" % logindex)
+                        logging.warning("No dft energies found for index: %s" % logfile)
                         continue
                     energies["index"] = logindex
                     if loop_counter == 0:
@@ -415,6 +265,38 @@ def create_molecules_csv(dft_log_dir):
                     writer.writerow(energies)
                     loop_counter += 1
         logging.info("Done creating molecule csv file: %s" % out_csv)
+    return
+
+
+def create_molecules_csv_xtb(xtb_lot_dir):
+    """
+    This function will create molecules.csv files inside the xtb calculation directory.
+    The csv file contains only two columns: index, energy
+    It is also assumed that the extension of the adf log files are in .out format, ie,
+    mol1_xyz.out, mol2_xyz.out, etc.
+    """
+    molecule_dir = os.path.join(xtb_lot_dir, "molecules")
+    out_csv = os.path.join(molecule_dir, "molecules.csv")
+    logging.info("Creating molecules.csv file from xtb calculations...")
+    logging.debug("Creating molecules.csv file at: %s" % molecule_dir)
+    if os.path.isfile(out_csv):
+        logging.info("Molecules csv file %s exists. Skipping" % out_csv)
+    else:
+        logfiles = get_files(molecule_dir, match="*_xyz.out")
+        loop_counter = 0
+        with open(out_csv, "w") as csvfile:
+            for logfile in logfiles:
+                energy = get_xtb_energy(logfile)
+                logindex = int(os.path.basename(logfile).split("_")[0])
+                if not energy:
+                    logging.warning("No xtb energies found for index: %s" % logfile)
+                    continue
+                if loop_counter == 0:
+                    writer = csv.DictWriter(csvfile, fieldnames=["index", "GFNXTB"])
+                    writer.writeheader()
+                writer.writerow([logindex, energy])
+                loop_counter += 1
+    logging.info("Done creating molecule csv file: %s" % out_csv)
     return
 
 
@@ -474,11 +356,13 @@ def create_output_db(
         output_file,
         xyzfiles,
         failed_indices_outfile,
-        dft_log_dir):
+        dft_log_dir,
+        xtb_log_dir):
     """
     This function creates the sqlite3 db file using ASE in the output directory.
 
-    The molecules.csv and atoms.csv files will be read from the dft_log_dir directory.
+    The molecules.csv and atoms.csv files will be read from the dft_log_dir, and
+    xtb_log_dir directories.
 
     The failed_indices is a file where the indices of the molecules will be saved for
     which the xyz2mol program fails to convert xyz to RDKit format mol object.
@@ -488,6 +372,8 @@ def create_output_db(
     """
     failed_mols_indices = []
     logging.info("creating database file...")
+
+
     logging.info("loading atomic csv files...")
     sz_atoms_energies = pd.read_csv(
         os.path.join(dft_log_dir, "SZ", "atoms", "atoms.csv"), index_col=False
@@ -498,6 +384,11 @@ def create_output_db(
     tzp_atoms_energies = pd.read_csv(
         os.path.join(dft_log_dir, "TZP", "atoms", "atoms.csv"), index_col=False
     )
+    xtb_atoms_energies = pd.read_csv(
+        os.path.join(xtb_log_dir, "atoms", "atoms.csv"), index_col=False
+    )
+
+
     logging.info("loading molecules csv files...")
     sz_mol_pd = pd.read_csv(
         os.path.join(dft_log_dir, "SZ", "molecules", "molecules.csv")
@@ -508,6 +399,11 @@ def create_output_db(
     tzp_mol_pd = pd.read_csv(
         os.path.join(dft_log_dir, "TZP", "molecules", "molecules.csv")
     )
+    xtb_mol_pd = pd.read_csv(
+        os.path.join(xtb_log_dir, "molecules", "molecules.csv")
+    )
+
+
     row_count = 0
     with ase.db.connect(output_file, append=False) as asedb:
         for xyzfile in xyzfiles:
@@ -525,13 +421,17 @@ def create_output_db(
             sz_e_row = sz_mol_pd.loc[sz_mol_pd["index"] == index]
             dzp_e_row = dzp_mol_pd.loc[dzp_mol_pd["index"] == index]
             tzp_e_row = tzp_mol_pd.loc[tzp_mol_pd["index"] == index]
+            xtb_e_row = xtb_mol_pd.loc[xtb_mol_pd["index"] == index]
+
             sz_atomization_e_dict = get_atomization_energy(sz_e_row, sz_atoms_energies, atoms)
             dzp_atomization_e_dict = get_atomization_energy(dzp_e_row, dzp_atoms_energies, atoms)
             tzp_atomization_e_dict = get_atomization_energy(tzp_e_row, tzp_atoms_energies, atoms)
+            xtb_atomization_e_dict = get_atomization_energy(xtb_e_row, xtb_atoms_energies, atoms)
             # modify the keys of the functional name so that it can be updated to ase db
             external_table["SZ"] = modify_dict_keys(sz_atomization_e_dict)
             external_table["DZP"] = modify_dict_keys(dzp_atomization_e_dict)
             external_table["TZP"] = modify_dict_keys(tzp_atomization_e_dict)
+            key_val_pairs["GFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
             key_val_pairs["index"] = index
             key_val_pairs["smiles"] = smiles
             ase_atoms_obj = ase.Atoms(symbols=atoms, positions=coords, pbc=False)
@@ -540,8 +440,9 @@ def create_output_db(
                         external_tables=external_table)
             #asedb.write(ase_atoms_obj, external_tables=external_table)
             row_count += 1
-            if (row_count % 10000) == 0:
+            if (row_count % 1000) == 0:
                 logging.info("Finished %d rows." % row_count)
+                break
     logging.info("Finished creating db file: %s", output_file)
     update_failed_indices(failed_indices_outfile, failed_mols_indices)
 
@@ -559,6 +460,7 @@ def main():
 
     xyz_dir = os.path.abspath(args.xyz_dir)
     dft_log_dir = os.path.abspath(args.dft_log_dir)
+    xtb_log_dir = os.path.abspath(args.xtb_log_dir)
     output_dir = os.path.abspath(args.output_dir)
     # create the output directory if doesn't exists
     check_create_outdir(output_dir)
@@ -567,9 +469,11 @@ def main():
     xyzfiles = get_files(xyz_dir, match="dsgdb9nsd_*.xyz")
     logging.info("Number of xyz files: %d" % len(xyzfiles))
     # First, create atoms.csv files inside each of the SZ, DZP, and TZP directories.
-    create_atoms_csv(dft_log_dir)
-    create_molecules_csv(dft_log_dir)
-    create_output_db(output_file, xyzfiles, failed_indices_outfile, dft_log_dir)
+    create_atoms_csv_dft(dft_log_dir)
+    create_atoms_csv_xtb(xtb_log_dir)
+    create_molecules_csv_dft(dft_log_dir)
+    create_molecules_csv_xtb(xtb_log_dir)
+    create_output_db(output_file, xyzfiles, failed_indices_outfile, dft_log_dir, xtb_log_dir)
     return
 
 
