@@ -224,6 +224,7 @@ def create_atoms_csv_xtb(xtb_log_dir):
             atoms_data.append([atom, energies])
         with open(out_csv, "w") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=["GFNXTB", "atom"])
+            print("test: ", atoms_data)
             writer.writerows(atoms_data)
         logging.info("atoms.csv file created inside: %s" % atoms_dir)
     return
