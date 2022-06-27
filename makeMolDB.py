@@ -451,7 +451,7 @@ def main():
     args = get_arguments()
 
     # logging setup
-    log_level = args.log.upper()
+    log_level = args.logging.upper()
     logging.basicConfig(
         format="[%(levelname)s: %(message)s",
         level=log_level,
