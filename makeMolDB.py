@@ -450,7 +450,6 @@ def create_output_db(
             row_count += 1
             if (row_count % 1000) == 0:
                 logging.info("Finished %d rows." % row_count)
-                break
     logging.info("Finished creating db file: %s", output_file)
     update_failed_indices(failed_indices_outfile, failed_mols_indices)
 
