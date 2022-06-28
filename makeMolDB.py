@@ -344,17 +344,21 @@ def get_atomization_energy(mol_e_row, atoms_energies, atoms_list):
     return mol_e_dict
 
 
-def modify_dict_keys(atomization_en_dict):
+def modify_dict_keys(atomization_en_dict, extension=None):
     """
     This function will modify the functional names by replacing the numbers,
     etc and add the corresponding "SZ" or "DZP" or "TZP" suffix to the names.
     Also, this function changes all non-alphanumeric characters of the functionals
     to underscore which is supported in the ASE db format.
+    The function will add the extension as a string in the last part of the keys
     """
     modified_dict = {}
     for func, en in atomization_en_dict.items():
         new_key = re.sub("[^0-9a-zA-Z]+", "_", func)
-        modified_dict[new_key] = en
+        if extension is None:
+            modified_dict[new_key] = en
+        else:
+            modified_dict[new_key + "_" + str(extension)] = en
     return modified_dict
 
 
@@ -413,7 +417,6 @@ def create_output_db(
     row_count = 0
     with ase.db.connect(output_file, append=False) as asedb:
         for xyzfile in xyzfiles:
-            external_table = {}
             key_val_pairs = {}
             index, atoms, coords = get_xyz_info(xyzfile)
             mols = get_smiles_from_xyz(xyzfile)
@@ -434,9 +437,9 @@ def create_output_db(
             tzp_atomization_e_dict = get_atomization_energy(tzp_e_row, tzp_atoms_energies, atoms)
             xtb_atomization_e_dict = get_atomization_energy(xtb_e_row, xtb_atoms_energies, atoms)
             # modify the keys of the functional name so that it can be updated to ase db
-            external_table["SZ"] = modify_dict_keys(sz_atomization_e_dict)
-            external_table["DZP"] = modify_dict_keys(dzp_atomization_e_dict)
-            external_table["TZP"] = modify_dict_keys(tzp_atomization_e_dict)
+            key_val_pairs.update(modify_dict_keys(sz_atomization_e_dict, extension="SZ"))
+            key_val_pairs.update(modify_dict_keys(dzp_atomization_e_dict, extension="DZP"))
+            key_val_pairs.update(modify_dict_keys(tzp_atomization_e_dict, extension="TZP"))
             key_val_pairs["GFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
             key_val_pairs["index"] = index
             key_val_pairs["smiles"] = smiles
