@@ -445,8 +445,7 @@ def create_output_db(
             key_val_pairs["smiles"] = smiles
             ase_atoms_obj = ase.Atoms(symbols=atoms, positions=coords, pbc=False)
             asedb.write(ase_atoms_obj,
-                        key_value_pairs=key_val_pairs,
-                        external_tables=external_table)
+                        key_value_pairs=key_val_pairs)
             #asedb.write(ase_atoms_obj, external_tables=external_table)
             row_count += 1
             if (row_count % 1000) == 0:
