@@ -448,7 +448,7 @@ def create_output_db(
                         key_value_pairs=key_val_pairs)
             #asedb.write(ase_atoms_obj, external_tables=external_table)
             row_count += 1
-            if (row_count % 1000) == 0:
+            if (row_count % 10000) == 0:
                 logging.info("Finished %d rows." % row_count)
     logging.info("Finished creating db file: %s", output_file)
     update_failed_indices(failed_indices_outfile, failed_mols_indices)
