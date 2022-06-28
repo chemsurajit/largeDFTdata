@@ -225,7 +225,7 @@ def create_atoms_csv_xtb(xtb_log_dir):
         with open(out_csv, "w") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=["atom", "GFNXTB"])
             writer.writeheader()
-            print("test: ", atoms_data)
+            logging.debug("atoms_data: %s" % atoms_data)
             writer.writerows(atoms_data)
         logging.info("atoms.csv file created inside: %s" % atoms_dir)
     return
@@ -266,6 +266,8 @@ def create_molecules_csv_dft(dft_log_dir):
                         writer.writeheader()
                     writer.writerow(energies)
                     loop_counter += 1
+                    if loop_counter % 10000 == 0:
+                        logging.info("Number of energies extracted: %d" %  loop_counter)
         logging.info("Done creating molecule csv file: %s" % out_csv)
     return
 
@@ -296,8 +298,10 @@ def create_molecules_csv_xtb(xtb_lot_dir):
                 if loop_counter == 0:
                     writer = csv.DictWriter(csvfile, fieldnames=["index", "GFNXTB"])
                     writer.writeheader()
-                writer.writerow([logindex, energy])
+                writer.writerow({"index": logindex, "GFNXTB": energy})
                 loop_counter += 1
+                if loop_counter % 10000 == 0:
+                    logging.info("Number of energies extracted: %d" % loop_counter)
     logging.info("Done creating molecule csv file: %s" % out_csv)
     return
 
