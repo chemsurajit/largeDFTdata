@@ -416,6 +416,8 @@ def create_output_db(
 
 
     row_count = 0
+
+    logging.info("Two files %s %s will be created as database file for the molecules." % (output_db_file, output_csv_file))
     with ase.db.connect(output_db_file, append=False) as asedb, open(output_csv_file, "w") as fout:
         for xyzfile in xyzfiles:
             key_val_pairs = {}
