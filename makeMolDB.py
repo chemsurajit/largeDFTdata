@@ -363,7 +363,8 @@ def modify_dict_keys(atomization_en_dict, extension=None):
 
 
 def create_output_db(
-        output_file,
+        output_db_file,
+        output_csv_file,
         xyzfiles,
         failed_indices_outfile,
         dft_log_dir,
@@ -415,7 +416,7 @@ def create_output_db(
 
 
     row_count = 0
-    with ase.db.connect(output_file, append=False) as asedb:
+    with ase.db.connect(output_db_file, append=False) as asedb, open(output_csv_file, "w") as fout:
         for xyzfile in xyzfiles:
             key_val_pairs = {}
             index, atoms, coords = get_xyz_info(xyzfile)
@@ -446,10 +447,17 @@ def create_output_db(
             ase_atoms_obj = ase.Atoms(symbols=atoms, positions=coords, pbc=False)
             asedb.write(ase_atoms_obj,
                         key_value_pairs=key_val_pairs)
-            #asedb.write(ase_atoms_obj, external_tables=external_table)
+            if row_count == 0:
+                # write the column names to the csv
+                csvout = csv.DictWriter(fout, fieldnames=list(key_val_pairs.keys()))
+                csvout.writeheader()
+                csvout.writerow(key_val_pairs)
+            else:
+                csvout.writerow(key_val_pairs)
             row_count += 1
             if (row_count % 10000) == 0:
                 logging.info("Finished %d rows." % row_count)
+                break
     logging.info("Finished creating db file: %s", output_file)
     update_failed_indices(failed_indices_outfile, failed_mols_indices)
 
@@ -472,7 +480,8 @@ def main():
     # create the output directory if doesn't exists
     check_create_outdir(output_dir)
     failed_indices_outfile = os.path.join(output_dir, "failed_xyz2mol.dat")
-    output_file = os.path.join(output_dir, "molecules_qm9.db")
+    output_db_file = os.path.join(output_dir, "molecules_qm9.db")
+    output_csv_file = os.path.join(output_dir, "molecules_qm9.csv")
     xyzfiles = get_files(xyz_dir, match="dsgdb9nsd_*.xyz")
     logging.info("Number of xyz files: %d" % len(xyzfiles))
     # First, create atoms.csv files inside each of the SZ, DZP, and TZP directories.
@@ -480,7 +489,12 @@ def main():
     create_atoms_csv_xtb(xtb_log_dir)
     create_molecules_csv_dft(dft_log_dir)
     create_molecules_csv_xtb(xtb_log_dir)
-    create_output_db(output_file, xyzfiles, failed_indices_outfile, dft_log_dir, xtb_log_dir)
+    create_output_db(output_db_file= output_db_file,
+                     output_csv_file=output_csv_file,
+                     xyzfiles=xyzfiles,
+                     failed_indices_outfile=failed_indices_outfile,
+                     dft_log_dir=dft_log_dir,
+                     xtb_log_dir=xtb_log_dir)
     return
 
 
