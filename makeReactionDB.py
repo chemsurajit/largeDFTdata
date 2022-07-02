@@ -134,7 +134,8 @@ def process_reaction_data(rids_pd, coreno, nodeno, molecule_data_pd, outdir):
     # First get all the columns corresponds to energies
     energy_columns = moecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_SZ")].to_list() + \
                     molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_DZP")].to_list() + \
-                    molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_TZP")].to_list()
+                    molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_TZP")].to_list() + \
+                    ["GFNXTB"]
     logging.info("The energy columns are: %s" % energy_columns)
     # set the start time for this core:
     start_core_time = time.time()
