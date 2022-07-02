@@ -459,7 +459,8 @@ def create_output_db(
             row_count += 1
             if (row_count % 10000) == 0:
                 logging.info("Finished %d rows." % row_count)
-    logging.info("Finished creating db file: %s", output_file)
+    logging.info("Finished creating db file: %s" % output_db_file)
+    logging.info("Finished creating csv file: %s" % output_csv_file)
     update_failed_indices(failed_indices_outfile, failed_mols_indices)
 
 
