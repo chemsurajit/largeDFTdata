@@ -344,17 +344,24 @@ def get_atomization_energy(mol_e_row, atoms_energies, atoms_list):
     return mol_e_dict
 
 
-def modify_dict_keys(atomization_en_dict, extension=None):
+def modify_dict_keys(atomization_en_dict, extension=None, for_ase=None):
     """
     This function will modify the functional names by replacing the numbers,
     etc and add the corresponding "SZ" or "DZP" or "TZP" suffix to the names.
     Also, this function changes all non-alphanumeric characters of the functionals
     to underscore which is supported in the ASE db format.
-    The function will add the extension as a string in the last part of the keys
+    The function will add the extension as a string in the last part of the keys.
+    for_ase indicates if we need to modify for ASE format or not. If true, all special characters
+    will be replaced by underscore. Default=True
     """
+    if for_ase is None:
+        for_ase = True
     modified_dict = {}
     for func, en in atomization_en_dict.items():
-        new_key = re.sub("[^0-9a-zA-Z]+", "_", func)
+        if for_ase:
+            new_key = re.sub("[^0-9a-zA-Z]+", "_", func)
+        else:
+            new_key = func
         if extension is None:
             modified_dict[new_key] = en
         else:
@@ -420,7 +427,8 @@ def create_output_db(
     logging.info("Two files %s %s will be created as database file for the molecules." % (output_db_file, output_csv_file))
     with ase.db.connect(output_db_file, append=False) as asedb, open(output_csv_file, "w") as fout:
         for xyzfile in xyzfiles:
-            key_val_pairs = {}
+            key_val_pairs_for_ase = {}
+            key_val_pairs_for_csv = {}
             index, atoms, coords = get_xyz_info(xyzfile)
             mols = get_smiles_from_xyz(xyzfile)
             if mols is None:
@@ -439,23 +447,38 @@ def create_output_db(
             dzp_atomization_e_dict = get_atomization_energy(dzp_e_row, dzp_atoms_energies, atoms)
             tzp_atomization_e_dict = get_atomization_energy(tzp_e_row, tzp_atoms_energies, atoms)
             xtb_atomization_e_dict = get_atomization_energy(xtb_e_row, xtb_atoms_energies, atoms)
-            # modify the keys of the functional name so that it can be updated to ase db
-            key_val_pairs.update(modify_dict_keys(sz_atomization_e_dict, extension="SZ"))
-            key_val_pairs.update(modify_dict_keys(dzp_atomization_e_dict, extension="DZP"))
-            key_val_pairs.update(modify_dict_keys(tzp_atomization_e_dict, extension="TZP"))
-            key_val_pairs["GFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
-            key_val_pairs["index"] = index
-            key_val_pairs["smiles"] = smiles
+            #
+            # modify the keys of the functional name so that it can be updated to ase db with supported format
+            #
+            key_val_pairs_for_ase.update(modify_dict_keys(sz_atomization_e_dict, extension="SZ", for_ase=True))
+            key_val_pairs_for_ase.update(modify_dict_keys(dzp_atomization_e_dict, extension="DZP", for_ase=True))
+            key_val_pairs_for_ase.update(modify_dict_keys(tzp_atomization_e_dict, extension="TZP", for_ase=True))
+            #
+            # For csv file, no need to modify special characters in the functional names. So, only the
+            # SZ, TZP, DZP will be added in the end of the functional names.
+            #
+            key_val_pairs_for_csv.update(modify_dict_keys(sz_atomization_e_dict, extension="SZ", for_ase=False))
+            key_val_pairs_for_csv.update(modify_dict_keys(sz_atomization_e_dict, extension="DZP", for_ase=False))
+            key_val_pairs_for_csv.update(modify_dict_keys(sz_atomization_e_dict, extension="TZP", for_ase=False))
+            #
+            key_val_pairs_for_ase["GFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
+            key_val_pairs_for_ase["index"] = index
+            key_val_pairs_for_ase["smiles"] = smiles
+            #
+            key_val_pairs_for_csv["DFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
+            key_val_pairs_for_csv["index"] = index
+            key_val_pairs_for_csv["smiles"] = smiles
+            #
             ase_atoms_obj = ase.Atoms(symbols=atoms, positions=coords, pbc=False)
             asedb.write(ase_atoms_obj,
-                        key_value_pairs=key_val_pairs)
+                        key_value_pairs=key_val_pairs_for_ase)
             if row_count == 0:
                 # write the column names to the csv
-                csvout = csv.DictWriter(fout, fieldnames=list(key_val_pairs.keys()))
+                csvout = csv.DictWriter(fout, fieldnames=list(key_val_pairs_for_csv.keys()))
                 csvout.writeheader()
-                csvout.writerow(key_val_pairs)
+                csvout.writerow(key_val_pairs_for_csv)
             else:
-                csvout.writerow(key_val_pairs)
+                csvout.writerow(key_val_pairs_for_csv)
             row_count += 1
             if (row_count % 10000) == 0:
                 logging.info("Finished %d rows." % row_count)
