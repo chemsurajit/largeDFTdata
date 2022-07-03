@@ -465,7 +465,7 @@ def create_output_db(
             key_val_pairs_for_ase["index"] = index
             key_val_pairs_for_ase["smiles"] = smiles
             #
-            key_val_pairs_for_csv["DFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
+            key_val_pairs_for_csv["GFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
             key_val_pairs_for_csv["index"] = index
             key_val_pairs_for_csv["smiles"] = smiles
             #
