@@ -442,7 +442,8 @@ def create_output_db(
             dzp_e_row = dzp_mol_pd.loc[dzp_mol_pd["index"] == index]
             tzp_e_row = tzp_mol_pd.loc[tzp_mol_pd["index"] == index]
             xtb_e_row = xtb_mol_pd.loc[xtb_mol_pd["index"] == index]
-
+            
+            
             sz_atomization_e_dict = get_atomization_energy(sz_e_row, sz_atoms_energies, atoms)
             dzp_atomization_e_dict = get_atomization_energy(dzp_e_row, dzp_atoms_energies, atoms)
             tzp_atomization_e_dict = get_atomization_energy(tzp_e_row, tzp_atoms_energies, atoms)
@@ -458,9 +459,14 @@ def create_output_db(
             # SZ, TZP, DZP will be added in the end of the functional names.
             #
             key_val_pairs_for_csv.update(modify_dict_keys(sz_atomization_e_dict, extension="SZ", for_ase=False))
-            key_val_pairs_for_csv.update(modify_dict_keys(sz_atomization_e_dict, extension="DZP", for_ase=False))
-            key_val_pairs_for_csv.update(modify_dict_keys(sz_atomization_e_dict, extension="TZP", for_ase=False))
+            key_val_pairs_for_csv.update(modify_dict_keys(dzp_atomization_e_dict, extension="DZP", for_ase=False))
+            key_val_pairs_for_csv.update(modify_dict_keys(tzp_atomization_e_dict, extension="TZP", for_ase=False))
+
             #
+            # This key will be saved for later assertion.
+            #
+            key_sz_ase = next(iter(key_val_pairs_for_ase))
+
             key_val_pairs_for_ase["GFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
             key_val_pairs_for_ase["index"] = index
             key_val_pairs_for_ase["smiles"] = smiles
@@ -469,6 +475,16 @@ def create_output_db(
             key_val_pairs_for_csv["index"] = index
             key_val_pairs_for_csv["smiles"] = smiles
             #
+            # Assert before the updating to ase db and csv
+            #
+            #
+            key_sz = next(iter(sz_atomization_e_dict))
+            logging.debug("Asserting different energies once more.")
+            assert key_val_pairs_for_ase[key_sz_ase] != key_val_pairs_for_ase[key_sz_ase[:-3] + "_TZP"]
+            assert key_val_pairs_for_csv[key_sz + "_SZ"] != key_val_pairs_for_csv[key_sz + "_TZP"]
+            logging.debug("Assertion finished.")
+
+
             ase_atoms_obj = ase.Atoms(symbols=atoms, positions=coords, pbc=False)
             asedb.write(ase_atoms_obj,
                         key_value_pairs=key_val_pairs_for_ase)
@@ -493,7 +509,7 @@ def main():
     # logging setup
     log_level = args.logging.upper()
     logging.basicConfig(
-        format="[%(levelname)s: %(message)s",
+        format="[%(levelname)s]: %(message)s",
         level=log_level,
         datefmt="%H:%M:%S",
     )
