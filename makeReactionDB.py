@@ -1,6 +1,8 @@
 import argparse
+from email import header
 import json
 import logging
+from operator import index
 import os.path
 import sys
 import time
@@ -109,7 +111,11 @@ def check_create_outdir(out_dir):
     return
 
 
-def process_reaction_data(rids_pd, coreno, nodeno, molecule_data_pd, outdir):
+def process_reaction_data(rids_pd, 
+                          coreno, 
+                          nodeno, 
+                          molecule_data_pd, 
+                          outdir):
     """
     The main function for the parallel run where all the reactions will be computed.
     return: Integer 0 upon completion.
@@ -177,11 +183,45 @@ def process_reaction_data(rids_pd, coreno, nodeno, molecule_data_pd, outdir):
         logging.debug("loopend pid, rowid: %d, %d" % (pid, rowid))
         # Now do the hard part.
         # Check how to include two coordinates in ASE db format.
+        # 1) Get the coordinates, atoms, in the same order from the xyz files
+        #reactant_atoms, reactant_coordinates = get_coordinate_from_xyz(reactant_index, xyzdir)
+        #pdt_atoms, pdt_coordinates = get_coordinates_from_xyz(pdt_index, xyzdir)
         # Then include the reactant coordinates and pdt coordinates.
         #
         # reactant_coords, pdt_coords, atoms = (reactant_xyz, pdt_xyz)
         #
         #
+        # For now, copy from the bond dependency paper. Add the db format later
+        # No need to go for if else in case of db file.
+        #The if else will be somewhat cheaper for csv file.
+        if counter == 0:
+            logging.info("New csv file will created: %s, pid: %d" % (output_csv_file, pid))
+            logging.debug("csv, pid, rowid in if: %s, %d, %d" %(output_csv_file, pid, rowid))
+            reaction_properties.to_csv(output_csv_file,
+                                       mode="w", index=False,
+                                       quoting=csv.QUOTE_MINIMAL,
+                                       sep=",")
+            counter += 1
+            continue
+        chunk_tocsv.append(reaction_properties)
+        if (counter+1) % 50000 == 0:
+            logging.info("Converted: %d reactions to %s with pid %d" % (counter, output_csv_file, pid))
+            logging.info("Will update the datachunk to csv file: %s" % output_csv_file)
+            pd.concat(chunk_tocsv).to_csv(output_csv_file,
+                                       mode="a", index=False,
+                                       quoting=csv.QUOTE_MINIMAL,
+                                       header=False, sep=",")
+            chunk_tocsv = []
+        counter += 1
+    # Now write the remainder data at the end of forloop to the csv file:
+    logging.info("Will update the remainder of the datachunk outside for loop to %s, pid: %d" % (output_csv_file, pid))
+    pd.concat(chunk_tocsv).to_csv(output_csv_file,
+                                mode="a", index=False,
+                                quoting=csv.QUOTE_MINIMAL,
+                                header=False, sep=",")
+    stop_core_time = time.time()
+    completed_in = round((stop_core_time-start_core_time)/3600.0, 2)
+    logging.info("Loop with pid %d completed in %s hr" % (pid, completed_in))
     return
 
 def main():
@@ -236,7 +276,7 @@ def main():
                 pass
     end = time.time()
     logging.info("JOB COMPLETED.")
-    logging.info("PPID %s completed in %s hr" % (os.getpid(), round((end-start)/3600.0, 2)))
+    logging.info("PPID %s completed in %se hr" % (os.getpid(), round((end-start)/3600.0, 2)))
     pass
 
 
