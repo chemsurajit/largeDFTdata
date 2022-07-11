@@ -204,7 +204,7 @@ def process_reaction_data(rids_pd,
             counter += 1
             continue
         chunk_tocsv.append(reaction_properties)
-        if (counter+1) % 50000 == 0:
+        if (counter+1) % 10000 == 0:
             logging.info("Converted: %d reactions to %s with pid %d" % (counter, output_csv_file, pid))
             logging.info("Will update the datachunk to csv file: %s" % output_csv_file)
             pd.concat(chunk_tocsv).to_csv(output_csv_file,
