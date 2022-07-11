@@ -132,7 +132,7 @@ def process_reaction_data(rids_pd, coreno, nodeno, molecule_data_pd, outdir):
     # here, startindex, endindex corresponds to index of the reaction
     logging.info("startindex, endindex, csvfile, dbfile: %s %s %s %s" % (start_rean_index, end_rean_index, output_csv_file, output_db_file))
     # First get all the columns corresponds to energies
-    energy_columns = moecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_SZ")].to_list() + \
+    energy_columns = molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_SZ")].to_list() + \
                     molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_DZP")].to_list() + \
                     molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_TZP")].to_list() + \
                     ["GFNXTB"]
@@ -168,12 +168,12 @@ def process_reaction_data(rids_pd, coreno, nodeno, molecule_data_pd, outdir):
         logging.debug("pid, pdt_smi: %d %s" % (pid, pdt_smi))
         reaction_properties = pdt_row[energy_columns] - reactant_row[energy_columns].values
         logging.debug("pid, reaction_prop_diff1: %d %s" % (pid, reaction_properties))
-        reaction_prop_diff["react_smi"], reaction_prop_diff["pdt_smi"] = [react_smi, pdt_smi]
-        logging.debug("pid, reaction_prop_diff2: %d, %s" % (pid, reaction_prop_diff.to_string()))
-        reaction_prop_diff["chemformula"] = reactant_row["chemformula"].values[0]
-        logging.debug("pid, reaction_prop_diff4: %d, %s" % (pid, reaction_prop_diff.to_string()))
-        reaction_prop_diff["reactindex"], reaction_prop_diff["pdtindex"] = [reactant_index, pdt_index]
-        logging.debug("pid, reaction_prop_diff5: %d, %s" % (pid, reaction_prop_diff.to_string()))
+        reaction_properties["react_smi"], reaction_properties["pdt_smi"] = [react_smi, pdt_smi]
+        logging.debug("pid, reaction_prop_diff2: %d, %s" % (pid, reaction_properties.to_string()))
+        reaction_properties["chemformula"] = reactant_row["chemformula"].values[0]
+        logging.debug("pid, reaction_prop_diff4: %d, %s" % (pid, reaction_properties.to_string()))
+        reaction_properties["reactindex"], reaction_properties["pdtindex"] = [reactant_index, pdt_index]
+        logging.debug("pid, reaction_prop_diff5: %d, %s" % (pid, reaction_properties.to_string()))
         logging.debug("loopend pid, rowid: %d, %d" % (pid, rowid))
         # Now do the hard part.
         # Check how to include two coordinates in ASE db format.
