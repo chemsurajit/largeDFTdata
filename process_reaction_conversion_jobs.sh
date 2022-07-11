@@ -13,6 +13,7 @@ pyscript_path="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null 
 outdir="./Data"
 submit_script="$pyscript_path/submit.sh"
 verbose="info"
+parallel_main_python_script="makeReactionDB.py"
 
 help () {
   echo "Usage: $0
@@ -55,7 +56,7 @@ while [[ "$#" -gt 0 ]]; do
   esac
   shift
 done
-# parameter processing completed.
+# optional parameter processing completed.
 ###########################################################################
 
 # Sanity test:
@@ -116,7 +117,7 @@ if [ "${run_calc^^}" == "Y" ]; then
     echo "submitting jobs with indices from: $json"
     echo ${json%.json}
     sbatch -J ${json%.json} $submit_script \
-              $pyscript_path/make_reactions_parallel.py \
+              $pyscript_path/$parallel_main_python_script \
               $rean_csv $mol_csv \
               $outdir $nprocs \
               $json $verbose
