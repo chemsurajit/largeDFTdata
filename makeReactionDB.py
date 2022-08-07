@@ -176,7 +176,7 @@ def process_reaction_data(rids_pd,
         logging.debug("pid, reaction_prop_diff1: %d %s" % (pid, reaction_properties))
         reaction_properties["react_smi"], reaction_properties["pdt_smi"] = [react_smi, pdt_smi]
         logging.debug("pid, reaction_prop_diff2: %d, %s" % (pid, reaction_properties.to_string()))
-        reaction_properties["chemformula"] = reactant_row["chemformula"].values[0]
+        #reaction_properties["chemformula"] = reactant_row["chemformula"].values[0]
         logging.debug("pid, reaction_prop_diff4: %d, %s" % (pid, reaction_properties.to_string()))
         reaction_properties["reactindex"], reaction_properties["pdtindex"] = [reactant_index, pdt_index]
         logging.debug("pid, reaction_prop_diff5: %d, %s" % (pid, reaction_properties.to_string()))
@@ -204,7 +204,7 @@ def process_reaction_data(rids_pd,
             counter += 1
             continue
         chunk_tocsv.append(reaction_properties)
-        if (counter+1) % 50000 == 0:
+        if (counter+1) % 10000 == 0:
             logging.info("Converted: %d reactions to %s with pid %d" % (counter, output_csv_file, pid))
             logging.info("Will update the datachunk to csv file: %s" % output_csv_file)
             pd.concat(chunk_tocsv).to_csv(output_csv_file,
@@ -246,12 +246,12 @@ def main():
     # The node number is derived from the JSON file name.
     # The file names are named as: Node_<n>.json, where <n> = 1..N
     # for a N node parallel job submission.
-    node_no = args.NJfile.split(".")[0]
+    node_no = args.json_id_file.split(".")[0]
     # load the reactions.csv file as a dataframe
-    logging.info("loading indices for %s from %s" % (node_no, args.NJfile))
+    logging.info("loading indices for %s from %s" % (node_no, args.json_id_file))
     logging.info("loading data...")
     molecule_data_pd, bigchunk_rid_pd = load_csv_data(rid_csv= args.rid_csv,
-                                                      json_id_file = args.NJfile,
+                                                      json_id_file = args.json_id_file,
                                                       mol_data_csv=args.mol_data)
     # Now split the node specific indices to the number of processors per node:
     splitted_rid_pd = np.array_split(bigchunk_rid_pd, nprocs)

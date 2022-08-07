@@ -7,6 +7,7 @@ from collections import Counter
 import ase.db
 import xyz2mol
 from rdkit import Chem
+from rdkit.Chem.rdMolDescriptors import CalcMolFormula
 import pandas as pd
 import csv
 import logging
@@ -437,7 +438,7 @@ def create_output_db(
                 continue
             #bonds_list = mol_to_bonds_list(mols[0], xyzfile)
             smiles = Chem.MolToSmiles(mols[0], isomericSmiles=True)
-            #chemformula = CalcMolFormula(mols[0])
+            chemformula = CalcMolFormula(mols[0])
             sz_e_row = sz_mol_pd.loc[sz_mol_pd["index"] == index]
             dzp_e_row = dzp_mol_pd.loc[dzp_mol_pd["index"] == index]
             tzp_e_row = tzp_mol_pd.loc[tzp_mol_pd["index"] == index]
@@ -474,6 +475,7 @@ def create_output_db(
             key_val_pairs_for_csv["GFNXTB"] = xtb_atomization_e_dict["GFNXTB"]
             key_val_pairs_for_csv["index"] = index
             key_val_pairs_for_csv["smiles"] = smiles
+            key_val_pairs_for_csv["chemformula"] = chemformula
             #
             # Assert before the updating to ase db and csv
             #
