@@ -11,8 +11,7 @@ Repository for bond dependency paper
 All the packages are part of standard Python library and can be installed with either Conda, PIP, etc.
 
 If this repository is used, please cite us. 
-1. Citation to the code can be downloaded by clicking: "Cite this repository" in the right side panel.
-2. Citation to the preprint in: https://doi.org/10.26434/chemrxiv-2022-9prf3
+1. Citation to the preprint in: https://doi.org/10.26434/chemrxiv-2022-9prf3
 
 ## Description of the Data.
 The data is publicly available now. Link: https://doi.org/10.26434/chemrxiv-2022-9prf3
