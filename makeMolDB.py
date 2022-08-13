@@ -188,9 +188,9 @@ def create_atoms_csv_dft(dft_log_dir):
     """
     small_mols = ["CH4", "HF", "H2", "NH3", "H2O"]
     atom_dirs = [
-        os.path.join(dft_log_dir, "SZ", "atoms_from_small_mols"),
+        os.path.join(dft_log_dir, "TZP", "atoms_from_small_mols"),
         os.path.join(dft_log_dir, "DZP", "atoms_from_small_mols"),
-        os.path.join(dft_log_dir, "TZP", "atoms_from_small_mols")
+        os.path.join(dft_log_dir, "SZ", "atoms_from_small_mols")
     ]
     for atom_dir in atom_dirs:
         atoms_data = []
@@ -200,18 +200,31 @@ def create_atoms_csv_dft(dft_log_dir):
             logging.warning("atoms csv file %s exists. Skipping." % out_csv)
         else:
             # first save the molecules energies as a dictionary
+            mol_pd = pd.DataFrame()
+            logging.info("creating atoms csv for: %s" % atom_dir)
             for mol in small_mols:
                 adf_mol_out = os.path.join(atom_dir, mol+".out")
                 energies = get_dft_energies(adf_mol_out) # energies is a dictionary
-                energies["mol"] = mol
-                mols_data.append(energies)
-            # Then, create the energies for the atoms
-            print(mols_data)
-            sys.exit()
+                tmp_df = pd.DataFrame(energies, index=[mol,])
+                mol_pd = pd.concat([mol_pd, tmp_df]) 
+            logging.debug("molecules energy for B3LYP: %s " % mol_pd["B3LYP(VWN5)"])
+            C_ens = (mol_pd.loc["CH4"] - 2*mol_pd.loc["H2"]).to_dict()
+            C_ens["atom"] = "C"
+            H_ens = (0.5*mol_pd.loc["H2"]).to_dict()
+            H_ens["atom"] = "H"
+            F_ens = (mol_pd.loc["HF"] - 0.5*mol_pd.loc["H2"]).to_dict()
+            F_ens["atom"] = "F"
+            O_ens = (mol_pd.loc["H2O"] - mol_pd.loc["H2"]).to_dict()
+            O_ens["atom"] = "O"
+            N_ens = (mol_pd.loc["NH3"] - 1.5*mol_pd.loc["H2"]).to_dict()
+            N_ens["atom"] = "N"
+            logging.debug("C atoms B3LYP ens: %s" % C_ens["B3LYP(VWN5)"])
+            logging.debug("Verify: E(CH4) - 2*E(H2)")
+
             with open(out_csv, 'w') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=atoms_data[0].keys())
+                writer = csv.DictWriter(csvfile, fieldnames=C_ens.keys())
                 writer.writeheader()
-                for row in atoms_data:
+                for row in [C_ens, H_ens, F_ens, O_ens, N_ens]:
                     writer.writerow(row)
             logging.info("atoms.csv file created inside: %s" % atom_dir)
     return
