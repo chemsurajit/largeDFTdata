@@ -49,6 +49,7 @@ while [[ "$#" -gt 0 ]]; do
     -nprocs|--nprocs) nprocs="$2" ; shift ;;
     -mol_csv|--mol_csv) mol_csv="$2"; shift ;;
     -rean_csv|--rean_csv) rean_csv="$2"; shift ;;
+    -g4mp2_csv|--g4mp2_csv) g4mp2_csv="$2"; shift ;;
     -pyscript_path|--pyscript_path) pyscript_path="$2"; shift ;;
     -verbose|--verbose) verbose="$2"; shift ;;
     -h|--help) help; exit 0 ;;
@@ -118,7 +119,7 @@ if [ "${run_calc^^}" == "Y" ]; then
     echo ${json%.json}
     sbatch -J ${json%.json} $submit_script \
               $pyscript_path/$parallel_main_python_script \
-              $rean_csv $mol_csv \
+              $rean_csv $mol_csv $g4mp2_csv \
               $outdir $nprocs \
               $json $verbose
   done
