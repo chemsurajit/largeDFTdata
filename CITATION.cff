@@ -1,0 +1,11 @@
+cff-version: 1.0.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Nandi"
+  given-names: "Surajit"
+  orcid: "https://orcid.org/0000-0002-7105-2209"
+title: "largeDFTdata"
+version: 1.0.0
+doi: ""
+date-released: 2022-07-07
+url: "https://github.com/chemsurajit/largeDFTdata"
