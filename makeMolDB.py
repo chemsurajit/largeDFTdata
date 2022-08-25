@@ -176,38 +176,27 @@ def get_xtb_energy(xtb_log_file):
 def create_atoms_csv_dft(dft_log_dir):
     """
     This function will create atoms.csv files inside the following directories:
-    PATH/SZ/atoms_from_small_mols/, PATH/DZP/atoms_from_small_mols/, and 
-    PATH/TZP/atoms_from_small_mols/
+    PATH/SZ/atoms/, PATH/DZP/atoms/, and PATH/TZP/atoms/
     It is also assumed that the extension of the adf log files are in .out format, ie,
-    CH4.out, HF.out, H2.out, NH3.out, H2O.out
-    E(C) = E(CH4) - 2*E(H2)
-    E(H) = 0.5*E(H2)
-    E(F) = E(HF) - 0.5*E(H2)
-    E(O) = E(H2O) - E(H2)
-    E(N) = E(NH3) - 1.5*E(H2)
+    C.out, F.out, H.out, N.out, O.out
     """
-    small_mols = ["CH4", "HF", "H2", "NH3", "H2O"]
+    atoms = ["C", "F", "H", "N", "O"]
     atom_dirs = [
-        os.path.join(dft_log_dir, "SZ", "atoms_from_small_mols"),
-        os.path.join(dft_log_dir, "DZP", "atoms_from_small_mols"),
-        os.path.join(dft_log_dir, "TZP", "atoms_from_small_mols")
+        os.path.join(dft_log_dir, "SZ", "atoms"),
+        os.path.join(dft_log_dir, "DZP", "atoms"),
+        os.path.join(dft_log_dir, "TZP", "atoms")
     ]
     for atom_dir in atom_dirs:
         atoms_data = []
-        mols_data = []
         out_csv = os.path.join(atom_dir, "atoms.csv")
         if os.path.isfile(out_csv):
             logging.warning("atoms csv file %s exists. Skipping." % out_csv)
         else:
-            # first save the molecules energies as a dictionary
-            for mol in small_mols:
-                adf_mol_out = os.path.join(atom_dir, mol+".out")
-                energies = get_dft_energies(adf_mol_out) # energies is a dictionary
-                energies["mol"] = mol
-                mols_data.append(energies)
-            # Then, create the energies for the atoms
-            print(mols_data)
-            sys.exit()
+            for atom in atoms:
+                adf_atom_out = os.path.join(atom_dir, atom+".out")
+                energies = get_dft_energies(adf_atom_out) # energies is a dictionary
+                energies["atom"] = atom
+                atoms_data.append(energies)
             with open(out_csv, 'w') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=atoms_data[0].keys())
                 writer.writeheader()
