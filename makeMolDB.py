@@ -360,7 +360,7 @@ def modify_dict_keys(atomization_en_dict, extension=None, for_ase=None):
     modified_dict = {}
     for func, en in atomization_en_dict.items():
         if for_ase:
-            new_key = re.sub("[^0-9a-zA-Z]+", "_", func)
+            new_key = re.sub("[^0-9a-zA-Z]", "_", func)
         else:
             new_key = func
         if extension is None:

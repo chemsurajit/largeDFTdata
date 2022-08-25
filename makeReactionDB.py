@@ -37,6 +37,12 @@ def get_arguments():
         help="CSV file containing DFT & XTB energies of the QM9 molecules."
     )
     parser.add_argument(
+            "-g4mp2_csv", "--g4mp2_csv",
+            type=str,
+            required=True,
+            help="molecular csv file containing G4MP2 energies."
+    )
+    parser.add_argument(
         "-nprocs", "--nprocs",
         type=int,
         required=False,
@@ -102,7 +108,7 @@ def check_create_outdir(out_dir):
     """
     if os.path.isdir(out_dir):
         logging.warning("The output data directory %s exists." % out_dir)
-        logging.warning("If you want to run this program, please delete it.")
+        logging.warning("If you want to run fresh, please delete it.")
     else:
         try:
             os.mkdir(out_dir)
@@ -115,7 +121,8 @@ def process_reaction_data(rids_pd,
                           coreno, 
                           nodeno, 
                           molecule_data_pd, 
-                          outdir):
+                          outdir,
+                          g4mp2_pd):
     """
     The main function for the parallel run where all the reactions will be computed.
     return: Integer 0 upon completion.
@@ -167,12 +174,26 @@ def process_reaction_data(rids_pd,
             print("The following exception occurs: %s " % str(ex))
             print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid, pdt_index))
             continue
+        # get the G4MP2 energies
+        try:
+            react_g4mp2_en = g4mp2_pd.loc[g4mp2_pd['index'] == reactant_index, 'G4MP2'].iat[0]
+        except Exception as ex:
+            print("The following G4MP2 exception occurs: %s " % str(ex))
+            print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid,reactant_index))
+            continue
+        try:
+            pdt_g4mp2_en = g4mp2_pd.loc[g4mp2_pd["index"] == pdt_index, "G4MP2"].iat[0]
+        except Exception as ex:
+            print("The following G4MP2 exception occurs: %s " % str(ex))
+            print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid,pdt_index))
+            continue
         logging.debug("pid, pdt row: %d %s" % (pid, pdt_row.to_string()))
         react_smi = reactant_row["smiles"].values[0]
         logging.debug("pid, react_smi %d %s" % (pid, react_smi))
         pdt_smi = pdt_row["smiles"].values[0]
         logging.debug("pid, pdt_smi: %d %s" % (pid, pdt_smi))
         reaction_properties = pdt_row[energy_columns] - reactant_row[energy_columns].values
+        reaction_properties["G4MP2"] = pdt_g4mp2_en - react_g4mp2_en
         logging.debug("pid, reaction_prop_diff1: %d %s" % (pid, reaction_properties))
         reaction_properties["react_smi"], reaction_properties["pdt_smi"] = [react_smi, pdt_smi]
         logging.debug("pid, reaction_prop_diff2: %d, %s" % (pid, reaction_properties.to_string()))
@@ -250,6 +271,7 @@ def main():
     # load the reactions.csv file as a dataframe
     logging.info("loading indices for %s from %s" % (node_no, args.json_id_file))
     logging.info("loading data...")
+    g4mp2_pd = pd.read_csv(args.g4mp2_csv)
     molecule_data_pd, bigchunk_rid_pd = load_csv_data(rid_csv= args.rid_csv,
                                                       json_id_file = args.json_id_file,
                                                       mol_data_csv=args.mol_data)
@@ -262,7 +284,7 @@ def main():
     start = time.time()
     logging.info("Starting parallel run in Node: %s" % node_no)
     with confut.ProcessPoolExecutor(max_workers=nprocs) as executor:
-        results = [executor.submit(process_reaction_data, rid_pd, coreno, node_no, molecule_data_pd, out_dir)
+        results = [executor.submit(process_reaction_data, rid_pd, coreno, node_no, molecule_data_pd, out_dir, g4mp2_pd)
                    for coreno, rid_pd in enumerate(splitted_rid_pd)]
         for result in confut.as_completed(results):
             try:
