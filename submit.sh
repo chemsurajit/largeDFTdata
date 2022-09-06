@@ -29,11 +29,10 @@ indices="Node_0.json"
 if [[ $# -gt 2 ]]; then
 	reactions_csv=$2
 	mol_csv=$3
-    g4mp2_csv=$4
-	output_dir=$5
-	nprocs=$6
-	indices=$7
-    verbose=$8
+	output_dir=$4
+	nprocs=$5
+	indices=$6
+    verbose=$7
 fi # To understand this, refer to the automated running bash script.
 
 echo "In submit script, parallel python reaction: $pyscript"
@@ -49,7 +48,6 @@ echo "In submit script, nprocs: $nprocs"
 python3 $pyscript --rid_csv $reactions_csv \
     --mol_data $mol_csv \
     --out_dir $output_dir --logging $verbose \
-    --nprocs $nprocs --json_id_file $indices \
-    --g4mp2_csv $g4mp2_csv
+    --nprocs $nprocs --json_id_file $indices 
 
 echo "finished"

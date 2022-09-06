@@ -36,12 +36,12 @@ def get_arguments():
         required=True,
         help="CSV file containing DFT & XTB energies of the QM9 molecules."
     )
-    parser.add_argument(
-            "-g4mp2_csv", "--g4mp2_csv",
-            type=str,
-            required=True,
-            help="molecular csv file containing G4MP2 energies."
-    )
+    #parser.add_argument(
+    #        "-g4mp2_csv", "--g4mp2_csv",
+    #        type=str,
+    #        required=True,
+    #        help="molecular csv file containing G4MP2 energies."
+    #)
     parser.add_argument(
         "-nprocs", "--nprocs",
         type=int,
@@ -121,8 +121,7 @@ def process_reaction_data(rids_pd,
                           coreno, 
                           nodeno, 
                           molecule_data_pd, 
-                          outdir,
-                          g4mp2_pd):
+                          outdir):
     """
     The main function for the parallel run where all the reactions will be computed.
     return: Integer 0 upon completion.
@@ -139,11 +138,11 @@ def process_reaction_data(rids_pd,
     logging.info("pid: %d, nreaction to be processed: %d" % (pid, rids_pd.shape[0]))
     #
     output_csv_file = os.path.join(outdir, "Reactions_" + str(nodeno) + "_core_" + str(coreno) + ".csv")
-    output_db_file = os.path.join(outdir, "Reactions_" + str(nodeno) + "_core_" + str(coreno) + ".db")
+    #output_db_file = os.path.join(outdir, "Reactions_" + str(nodeno) + "_core_" + str(coreno) + ".db")
     # This information is important information as it might save time later
     # when we want to see a particular reaction by index.
     # here, startindex, endindex corresponds to index of the reaction
-    logging.info("startindex, endindex, csvfile, dbfile: %s %s %s %s" % (start_rean_index, end_rean_index, output_csv_file, output_db_file))
+    logging.info("startindex, endindex, csvfile, dbfile: %s %s %s %s" % (start_rean_index, end_rean_index, output_csv_file, output_csv_file))
     # First get all the columns corresponds to energies
     energy_columns = molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_SZ")].to_list() + \
                     molecule_data_pd.columns[molecule_data_pd.columns.str.endswith("_DZP")].to_list() + \
@@ -159,6 +158,7 @@ def process_reaction_data(rids_pd,
         logging.debug("loopstart pid, rowid, row: %d, %d, %s" % (pid, rowid, row.to_string()))
         reactant_index = row.reactindex
         pdt_index = row.pdtindex
+        rxn_index = row.rxnindex
         logging.debug("pid, reactant_index: %d %d" %(pid, reactant_index))
         logging.debug("pid, pdt index: %d %d" % (pid, pdt_index))
         try:
@@ -175,31 +175,31 @@ def process_reaction_data(rids_pd,
             print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid, pdt_index))
             continue
         # get the G4MP2 energies
-        try:
-            react_g4mp2_en = g4mp2_pd.loc[g4mp2_pd['index'] == reactant_index, 'G4MP2'].iat[0]
-        except Exception as ex:
-            print("The following G4MP2 exception occurs: %s " % str(ex))
-            print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid,reactant_index))
-            continue
-        try:
-            pdt_g4mp2_en = g4mp2_pd.loc[g4mp2_pd["index"] == pdt_index, "G4MP2"].iat[0]
-        except Exception as ex:
-            print("The following G4MP2 exception occurs: %s " % str(ex))
-            print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid,pdt_index))
-            continue
+        #try:
+        #    react_g4mp2_en = g4mp2_pd.loc[g4mp2_pd['index'] == reactant_index, 'G4MP2'].iat[0]
+        #except Exception as ex:
+        #    print("The following G4MP2 exception occurs: %s " % str(ex))
+        #    print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid,reactant_index))
+        #    continue
+        #try:
+        #    pdt_g4mp2_en = g4mp2_pd.loc[g4mp2_pd["index"] == pdt_index, "G4MP2"].iat[0]
+        #except Exception as ex:
+        #    print("The following G4MP2 exception occurs: %s " % str(ex))
+        #    print("No row in molecule_data_pd for pid, pdt index: %d %d" % (pid,pdt_index))
+        #    continue
         logging.debug("pid, pdt row: %d %s" % (pid, pdt_row.to_string()))
         react_smi = reactant_row["smiles"].values[0]
         logging.debug("pid, react_smi %d %s" % (pid, react_smi))
         pdt_smi = pdt_row["smiles"].values[0]
         logging.debug("pid, pdt_smi: %d %s" % (pid, pdt_smi))
         reaction_properties = pdt_row[energy_columns] - reactant_row[energy_columns].values
-        reaction_properties["G4MP2"] = pdt_g4mp2_en - react_g4mp2_en
-        logging.debug("pid, reaction_prop_diff1: %d %s" % (pid, reaction_properties))
+        #reaction_properties["G4MP2"] = pdt_g4mp2_en - react_g4mp2_en
+        #logging.debug("pid, reaction_prop_diff1: %d %s" % (pid, reaction_properties))
         reaction_properties["react_smi"], reaction_properties["pdt_smi"] = [react_smi, pdt_smi]
         logging.debug("pid, reaction_prop_diff2: %d, %s" % (pid, reaction_properties.to_string()))
         #reaction_properties["chemformula"] = reactant_row["chemformula"].values[0]
         logging.debug("pid, reaction_prop_diff4: %d, %s" % (pid, reaction_properties.to_string()))
-        reaction_properties["reactindex"], reaction_properties["pdtindex"] = [reactant_index, pdt_index]
+        reaction_properties["reactindex"], reaction_properties["pdtindex"], reaction_properties["rxnindex"] = [reactant_index, pdt_index, rxn_index]
         logging.debug("pid, reaction_prop_diff5: %d, %s" % (pid, reaction_properties.to_string()))
         logging.debug("loopend pid, rowid: %d, %d" % (pid, rowid))
         # Now do the hard part.
@@ -271,7 +271,6 @@ def main():
     # load the reactions.csv file as a dataframe
     logging.info("loading indices for %s from %s" % (node_no, args.json_id_file))
     logging.info("loading data...")
-    g4mp2_pd = pd.read_csv(args.g4mp2_csv)
     molecule_data_pd, bigchunk_rid_pd = load_csv_data(rid_csv= args.rid_csv,
                                                       json_id_file = args.json_id_file,
                                                       mol_data_csv=args.mol_data)
@@ -284,7 +283,7 @@ def main():
     start = time.time()
     logging.info("Starting parallel run in Node: %s" % node_no)
     with confut.ProcessPoolExecutor(max_workers=nprocs) as executor:
-        results = [executor.submit(process_reaction_data, rid_pd, coreno, node_no, molecule_data_pd, out_dir, g4mp2_pd)
+        results = [executor.submit(process_reaction_data, rid_pd, coreno, node_no, molecule_data_pd, out_dir)
                    for coreno, rid_pd in enumerate(splitted_rid_pd)]
         for result in confut.as_completed(results):
             try:
